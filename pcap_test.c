@@ -1,5 +1,6 @@
 #include <pcap.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <arpa/inet.h>
 #include <net/ethernet.h>
 #include <netinet/ip.h>
@@ -61,6 +62,7 @@ int main(int argc, char *argv[])
 	struct pcap_pkthdr *header;	/* The header that pcap gives us */
 	const u_char *packet;		/* The actual packet */
 	int res;
+	FILE *f;
 	struct ethhdr *ether;
 	struct ip *ip;
 	struct tcphdr *tcp;
@@ -108,12 +110,18 @@ int main(int argc, char *argv[])
 		/* Print its length */
 		
 		ether = (struct ethhdr*)packet;
-		ip = (struct ip*)(ether + sizeof(struct ethhdr)); 
+		ip = (struct ip*)(packet + 14); 
 		
 		if (ntohs(ether->h_proto) == ETHERTYPE_IP)
 		{
+			f = fopen("./sample.pcap", "wb");
+			fwrite(ether, 1, 500, f);
+			fclose(f);
+			printf("packet : %p\n", packet);
+			printf("ip : %p\n", ip);
 			printf("src ip - %s\n", inet_ntoa(ip->ip_src));
 			printf("dst ip - %s\n", inet_ntoa(ip->ip_dst));
+			break;
 			if (ip->ip_p == IPPROTO_TCP)
 			{
 				printf("\nsrc mac - %02x:%02x:%02x:%02x:%02x:%02x\n", (unsigned char)ether->h_source[0], (unsigned char)ether->h_source[1], (unsigned char)ether->h_source[2], (unsigned char)ether->h_source[3], (unsigned char)ether->h_source[4], (unsigned char)ether->h_source[5]);
