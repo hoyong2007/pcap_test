@@ -6,49 +6,7 @@
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <netinet/in.h>
-typedef struct ethernet{
-	u_char src[6];
-	u_char dst[6];
-	u_char type[2]; 	// 08 00 -> IP
-} ETHER;
 
-typedef struct ipp{
-	u_char version;
-	u_char dsp;
-	u_short len;
-	u_short id;
-	u_short fragment;
-	u_char ttl;
-	u_char protocol;
-	u_short checksum;
-	struct in_addr src;
-	struct in_addr dst;
-	/*
-	char version;
-	char dsp;
-	char tot_len[2];
-	char id[2];
-	char flag;
-	char fragment;
-	char ttl;
-	char protocol;	// 06 -> TCP
-	char checksum[2];
-	char src[4];
-	char dst[4];
-	*/
-} IP;
-
-typedef struct tcp{
-	char sport[2];
-	char dport[2];
-	char seq_num[4];
-	char ack_num[4];
-	char len;
-	char flag;
-	char win_size[2];
-	char checksum[2];
-	char urg[2];
-} TCP;
 
 int main(int argc, char *argv[])
 {
@@ -62,13 +20,10 @@ int main(int argc, char *argv[])
 	struct pcap_pkthdr *header;	/* The header that pcap gives us */
 	const u_char *packet;		/* The actual packet */
 	int res;
-	FILE *f;
 	struct ethhdr *ether;
 	struct ip *ip;
 	struct tcphdr *tcp;
-	//ETHER *ether;
-	//IP *ip;
-	//TCP *tcp;
+
 
 	/* Define the device */
 	dev = pcap_lookupdev(errbuf);
@@ -101,12 +56,12 @@ int main(int argc, char *argv[])
 	while(1) {
 		res = pcap_next_ex(handle, &header, &packet);
 		if (res==0)
-		{
-			printf("timeout");
 			continue;
-		}
 		else if (res==-1)
+		{
 			printf("error");
+			return -1;
+		}
 		/* Print its length */
 		
 		ether = (struct ethhdr*)packet;
@@ -114,21 +69,15 @@ int main(int argc, char *argv[])
 		
 		if (ntohs(ether->h_proto) == ETHERTYPE_IP)
 		{
-			f = fopen("./sample.pcap", "wb");
-			fwrite(ether, 1, 500, f);
-			fclose(f);
-			printf("packet : %p\n", packet);
-			printf("ip : %p\n", ip);
-			printf("src ip - %s\n", inet_ntoa(ip->ip_src));
-			printf("dst ip - %s\n", inet_ntoa(ip->ip_dst));
-			break;
 			if (ip->ip_p == IPPROTO_TCP)
 			{
+				tcp = (struct tcphdr*)(packet + 14 + ip->ip_hl*4);
 				printf("\nsrc mac - %02x:%02x:%02x:%02x:%02x:%02x\n", (unsigned char)ether->h_source[0], (unsigned char)ether->h_source[1], (unsigned char)ether->h_source[2], (unsigned char)ether->h_source[3], (unsigned char)ether->h_source[4], (unsigned char)ether->h_source[5]);
 				printf("dst mac - %02x:%02x:%02x:%02x:%02x:%02x\n", (unsigned char)ether->h_dest[0], (unsigned char)ether->h_dest[1], (unsigned char)ether->h_dest[2], (unsigned char)ether->h_dest[3], (unsigned char)ether->h_dest[4], (unsigned char)ether->h_dest[5]);
 				printf("src ip - %s\n", inet_ntoa(ip->ip_src));
 				printf("dst ip - %s\n", inet_ntoa(ip->ip_dst));
-				tcp = (struct tcphdr*)(packet + ip->ip_hl*4);
+				printf("src port - %d\n", ntohs(tcp->th_sport));
+				printf("dst port - %d\n", ntohs(tcp->th_dport));
 			}
 		}
 	}
@@ -147,5 +96,6 @@ int main(int argc, char *argv[])
 * header -> packet's len, time
 * packet -> packet buffer pointer (start with ethernet header)
 * packet[12]==0x08 && packet[13]==0x00
-* ntohs
+* ntohs - network byte to host short
+* inet_ntoa - in_addr to address string
 */
