@@ -1,5 +1,53 @@
- #include <pcap.h>
- #include <stdio.h>
+#include <pcap.h>
+#include <stdio.h>
+#include <arpa/inet.h>
+#include <net/ethernet.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/in.h>
+typedef struct ethernet{
+	u_char src[6];
+	u_char dst[6];
+	u_char type[2]; 	// 08 00 -> IP
+} ETHER;
+
+typedef struct ipp{
+	u_char version;
+	u_char dsp;
+	u_short len;
+	u_short id;
+	u_short fragment;
+	u_char ttl;
+	u_char protocol;
+	u_short checksum;
+	struct in_addr src;
+	struct in_addr dst;
+	/*
+	char version;
+	char dsp;
+	char tot_len[2];
+	char id[2];
+	char flag;
+	char fragment;
+	char ttl;
+	char protocol;	// 06 -> TCP
+	char checksum[2];
+	char src[4];
+	char dst[4];
+	*/
+} IP;
+
+typedef struct tcp{
+	char sport[2];
+	char dport[2];
+	char seq_num[4];
+	char ack_num[4];
+	char len;
+	char flag;
+	char win_size[2];
+	char checksum[2];
+	char urg[2];
+} TCP;
 
 int main(int argc, char *argv[])
 {
@@ -10,8 +58,15 @@ int main(int argc, char *argv[])
 	char filter_exp[] = "port 80";	/* The filter expression */
 	bpf_u_int32 mask;		/* Our netmask */
 	bpf_u_int32 net;		/* Our IP */
-	struct pcap_pkthdr header;	/* The header that pcap gives us */
+	struct pcap_pkthdr *header;	/* The header that pcap gives us */
 	const u_char *packet;		/* The actual packet */
+	int res;
+	struct ethhdr *ether;
+	struct ip *ip;
+	struct tcphdr *tcp;
+	//ETHER *ether;
+	//IP *ip;
+	//TCP *tcp;
 
 	/* Define the device */
 	dev = pcap_lookupdev(errbuf);
@@ -26,7 +81,7 @@ int main(int argc, char *argv[])
 		mask = 0;
 	}
 	/* Open the session in promiscuous mode */
-	handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);
+	handle = pcap_open_live(dev, 65536, 0, 1000, errbuf);
 	if (handle == NULL) {
 		fprintf(stderr, "Couldn't open device %s: %s\n", dev, errbuf);
 		return(2);
@@ -42,11 +97,34 @@ int main(int argc, char *argv[])
 	}
 	/* Grab a packet */
 	while(1) {
-		packet = pcap_next_ex(handle, &header);
+		res = pcap_next_ex(handle, &header, &packet);
+		if (res==0)
+		{
+			printf("timeout");
+			continue;
+		}
+		else if (res==-1)
+			printf("error");
 		/* Print its length */
-		printf("Jacked a packet with length of [%d]\n", header.caplen);
-		/* And close the session */
+		
+		ether = (struct ethhdr*)packet;
+		ip = (struct ip*)(ether + sizeof(struct ethhdr)); 
+		
+		if (ntohs(ether->h_proto) == ETHERTYPE_IP)
+		{
+			printf("src ip - %s\n", inet_ntoa(ip->ip_src));
+			printf("dst ip - %s\n", inet_ntoa(ip->ip_dst));
+			if (ip->ip_p == IPPROTO_TCP)
+			{
+				printf("\nsrc mac - %02x:%02x:%02x:%02x:%02x:%02x\n", (unsigned char)ether->h_source[0], (unsigned char)ether->h_source[1], (unsigned char)ether->h_source[2], (unsigned char)ether->h_source[3], (unsigned char)ether->h_source[4], (unsigned char)ether->h_source[5]);
+				printf("dst mac - %02x:%02x:%02x:%02x:%02x:%02x\n", (unsigned char)ether->h_dest[0], (unsigned char)ether->h_dest[1], (unsigned char)ether->h_dest[2], (unsigned char)ether->h_dest[3], (unsigned char)ether->h_dest[4], (unsigned char)ether->h_dest[5]);
+				printf("src ip - %s\n", inet_ntoa(ip->ip_src));
+				printf("dst ip - %s\n", inet_ntoa(ip->ip_dst));
+				tcp = (struct tcphdr*)(packet + ip->ip_hl*4);
+			}
+		}
 	}
+	/* And close the session */
 	pcap_close(handle);
 	return(0);
 }
@@ -60,4 +138,6 @@ int main(int argc, char *argv[])
 * in the while
 * header -> packet's len, time
 * packet -> packet buffer pointer (start with ethernet header)
+* packet[12]==0x08 && packet[13]==0x00
+* ntohs
 */
