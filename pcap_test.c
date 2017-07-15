@@ -105,7 +105,6 @@ int main(int argc, char *argv[])
 * fwrite- pcap_sendpacket
 * fclose- pcap_close
 * gcc -o pcap_test pcap_test.c -lpcap
-* in the while
 * header -> packet's len, time
 * packet -> packet buffer pointer (start with ethernet header)
 * ntohs - network byte to host short
