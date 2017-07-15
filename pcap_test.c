@@ -108,7 +108,6 @@ int main(int argc, char *argv[])
 * in the while
 * header -> packet's len, time
 * packet -> packet buffer pointer (start with ethernet header)
-* packet[12]==0x08 && packet[13]==0x00
 * ntohs - network byte to host short
 * inet_ntoa - in_addr to address string
 */
