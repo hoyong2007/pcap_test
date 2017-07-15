@@ -20,9 +20,11 @@ int main(int argc, char *argv[])
 	struct pcap_pkthdr *header;	/* The header that pcap gives us */
 	const u_char *packet;		/* The actual packet */
 	int res;
+	int i;
 	struct ethhdr *ether;
 	struct ip *ip;
 	struct tcphdr *tcp;
+	unsigned char *data;
 
 
 	/* Define the device */
@@ -78,6 +80,17 @@ int main(int argc, char *argv[])
 				printf("dst ip - %s\n", inet_ntoa(ip->ip_dst));
 				printf("src port - %d\n", ntohs(tcp->th_sport));
 				printf("dst port - %d\n", ntohs(tcp->th_dport));
+				//printf("data offset - %x\n", tcp->th_off * 4);
+				//printf("packet len - %x\n", ntohs(ip->ip_len));
+				data = (unsigned char*)(packet + 14 + ip->ip_hl*4 + tcp->th_off*4);
+				printf("-----------data start----------");
+				for (i=0 ; i<ntohs(ip->ip_len)-(tcp->th_off*4) ; i+=2)
+				{
+					if (i % 0x10 == 0 )
+						printf("\n");
+					printf(" %02x%02x", data[i], data[i+1]);
+				}
+				printf("\n------------data end-----------\n\n");
 			}
 		}
 	}
