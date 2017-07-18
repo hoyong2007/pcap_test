@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 				//printf("packet len - %x\n", ntohs(ip->ip_len));
 				data = (unsigned char*)(packet + 14 + ip->ip_hl*4 + tcp->th_off*4);
 				printf("-----------data start----------");
-				for (i=0 ; i<ntohs(ip->ip_len)-(tcp->th_off*4) ; i+=2)
+				for (i=0 ; i<ntohs(ip->ip_len)-(tcp->th_off*4)-(ip->ip_hl*4) ; i+=2)
 				{
 					if (i % 0x10 == 0 )
 						printf("\n");
