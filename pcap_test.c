@@ -19,12 +19,14 @@ int main(int argc, char *argv[])
 	bpf_u_int32 net;		/* Our IP */
 	struct pcap_pkthdr *header;	/* The header that pcap gives us */
 	const u_char *packet;		/* The actual packet */
-	int res;
-	int i;
+	uint32_t res;
+	uint32_t i;
 	struct ethhdr *ether;
 	struct ip *ip;
 	struct tcphdr *tcp;
 	unsigned char *data;
+	u_char src_addr[20];
+	u_char dst_addr[20];
 
 
 	/* Define the device */
@@ -39,8 +41,14 @@ int main(int argc, char *argv[])
 		net = 0;
 		mask = 0;
 	}
+	
+	if (argc < 2) {
+		printf("Usage : ./pcap_test [interface]\n");
+		return 2;
+	}
+
 	/* Open the session in promiscuous mode */
-	handle = pcap_open_live(dev, 65536, 0, 1000, errbuf);
+	handle = pcap_open_live(argv[1], 65536, 0, 1000, errbuf);
 	if (handle == NULL) {
 		fprintf(stderr, "Couldn't open device %s: %s\n", dev, errbuf);
 		return(2);
@@ -74,23 +82,26 @@ int main(int argc, char *argv[])
 			if (ip->ip_p == IPPROTO_TCP)
 			{
 				tcp = (struct tcphdr*)(packet + 14 + ip->ip_hl*4);
-				printf("\nsrc mac - %02x:%02x:%02x:%02x:%02x:%02x\n", (unsigned char)ether->h_source[0], (unsigned char)ether->h_source[1], (unsigned char)ether->h_source[2], (unsigned char)ether->h_source[3], (unsigned char)ether->h_source[4], (unsigned char)ether->h_source[5]);
+				printf("\n\nsrc mac - %02x:%02x:%02x:%02x:%02x:%02x\n", (unsigned char)ether->h_source[0], (unsigned char)ether->h_source[1], (unsigned char)ether->h_source[2], (unsigned char)ether->h_source[3], (unsigned char)ether->h_source[4], (unsigned char)ether->h_source[5]);
 				printf("dst mac - %02x:%02x:%02x:%02x:%02x:%02x\n", (unsigned char)ether->h_dest[0], (unsigned char)ether->h_dest[1], (unsigned char)ether->h_dest[2], (unsigned char)ether->h_dest[3], (unsigned char)ether->h_dest[4], (unsigned char)ether->h_dest[5]);
-				printf("src ip - %s\n", inet_ntoa(ip->ip_src));
-				printf("dst ip - %s\n", inet_ntoa(ip->ip_dst));
+				inet_ntop(AF_INET, &(ip->ip_src), src_addr, sizeof(src_addr));
+				inet_ntop(AF_INET, &(ip->ip_dst), dst_addr, sizeof(dst_addr));
+				printf("src ip - %s\n", src_addr);
+				printf("dst ip - %s\n", dst_addr);
 				printf("src port - %d\n", ntohs(tcp->th_sport));
 				printf("dst port - %d\n", ntohs(tcp->th_dport));
 				//printf("data offset - %x\n", tcp->th_off * 4);
 				//printf("packet len - %x\n", ntohs(ip->ip_len));
 				data = (unsigned char*)(packet + 14 + ip->ip_hl*4 + tcp->th_off*4);
-				printf("-----------data start----------");
 				for (i=0 ; i<ntohs(ip->ip_len)-(tcp->th_off*4)-(ip->ip_hl*4) ; i+=2)
-				{
+				{	if (i == 0)
+						printf("-----------data start----------");
 					if (i % 0x10 == 0 )
 						printf("\n");
 					printf(" %02x%02x", data[i], data[i+1]);
 				}
-				printf("\n------------data end-----------\n\n");
+				if (i>0)
+					printf("\n------------data end-----------\n\n");
 			}
 		}
 	}
