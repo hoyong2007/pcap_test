@@ -28,19 +28,6 @@ int main(int argc, char *argv[])
 	u_char src_addr[20];
 	u_char dst_addr[20];
 
-
-	/* Define the device */
-	dev = pcap_lookupdev(errbuf);
-	if (dev == NULL) {
-		fprintf(stderr, "Couldn't find default device: %s\n", errbuf);
-		return(2);
-	}
-	/* Find the properties for the device */
-	if (pcap_lookupnet(dev, &net, &mask, errbuf) == -1) {
-		fprintf(stderr, "Couldn't get netmask for device %s: %s\n", dev, errbuf);
-		net = 0;
-		mask = 0;
-	}
 	
 	if (argc < 2) {
 		printf("Usage : ./pcap_test [interface]\n");
@@ -84,8 +71,8 @@ int main(int argc, char *argv[])
 				tcp = (struct tcphdr*)(packet + 14 + ip->ip_hl*4);
 				printf("\n\nsrc mac - %02x:%02x:%02x:%02x:%02x:%02x\n", (unsigned char)ether->h_source[0], (unsigned char)ether->h_source[1], (unsigned char)ether->h_source[2], (unsigned char)ether->h_source[3], (unsigned char)ether->h_source[4], (unsigned char)ether->h_source[5]);
 				printf("dst mac - %02x:%02x:%02x:%02x:%02x:%02x\n", (unsigned char)ether->h_dest[0], (unsigned char)ether->h_dest[1], (unsigned char)ether->h_dest[2], (unsigned char)ether->h_dest[3], (unsigned char)ether->h_dest[4], (unsigned char)ether->h_dest[5]);
-				inet_ntop(AF_INET, &(ip->ip_src), src_addr, sizeof(src_addr));
-				inet_ntop(AF_INET, &(ip->ip_dst), dst_addr, sizeof(dst_addr));
+				inet_ntop(AF_INET, &(ip->ip_src), src_addr, INET_ADDRSTRLEN);
+				inet_ntop(AF_INET, &(ip->ip_dst), dst_addr, INET_ADDRSTRLEN);
 				printf("src ip - %s\n", src_addr);
 				printf("dst ip - %s\n", dst_addr);
 				printf("src port - %d\n", ntohs(tcp->th_sport));
